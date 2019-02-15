@@ -1,4 +1,4 @@
-function [config, spec_list, spec_radii, spec_values] = UEGO(evals, levels, max_spec_num, min_r, bounds, func)
+function [config, spec_list, spec_radii, spec_values] = UEGO(evals, levels, max_spec_num, min_r, bounds, func, local_optimizer, optimizer_config)
 % UEGO  Implementation of Universal Evolutionary Global Optimizer (UEGO), 
 % which is a stochastic population-based (memetic) optimization algorithm.
 % [config, spec_list, spec_radii, spec_values] = UEGO(evals, levels, 
@@ -12,13 +12,13 @@ function [config, spec_list, spec_radii, spec_values] = UEGO(evals, levels, max_
     if ~isempty(config)
         [spec_list, spec_radii, spec_values] = Init_Spec_List(config.radii(1), bounds, func); % Level 1
         if config.n(1)>0
-           disp('Local optimization pending'); % Optimize...
+           [spec_list, spec_values] = Optimize_Species(spec_list, spec_radii, spec_values, bounds, func, config.n(1), local_optimizer, optimizer_config);
         end
         for i=2:1:levels
             [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_radii, spec_values, bounds, func, config.new(i), config.radii(i));
             [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, config.radii(i));
             [spec_list, spec_radii, spec_values] = Shorten_Spec_List(spec_list, spec_radii, spec_values, max_spec_num);
-            disp(['Level: ' num2str(i) ' -> Local optimization pending']); % Optimize...
+            [spec_list, spec_values] = Optimize_Species(spec_list, spec_radii, spec_values, bounds, func, config.n(i)/max_spec_num, local_optimizer, optimizer_config);
             [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, config.radii(i));
         end
         [spec_values, indices] = sort(spec_values, 'ascend'); % Sort the final list -> Lower is better
@@ -164,6 +164,16 @@ function [spec_list, spec_radii, spec_values] = Shorten_Spec_List(spec_list, spe
             spec_list(:, indices(i)) = [];
             spec_radii(indices(i)) = [];
             spec_values(indices(i)) = [];
+        end
+    end
+end
+
+function [spec_list, spec_values] = Optimize_Species(spec_list, spec_radii, spec_values, bounds, func, budget, local_optimizer, optimizer_config)
+    for i=1:1:size(spec_list, 2) % The number of columns is equal to the length of the list of species
+        [new_point, new_value] = local_optimizer(spec_list(:, i), spec_radii(i), spec_values(i), bounds, func, budget, optimizer_config);
+        if new_value < spec_values(i) % If a better new center has been found, replace (but do not change the radius)
+           spec_list(:, i) = new_point;
+           spec_values(i) = new_value;
         end
     end
 end
