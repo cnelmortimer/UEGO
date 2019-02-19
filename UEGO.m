@@ -160,11 +160,9 @@ function [spec_list, spec_radii, spec_values] = Shorten_Spec_List(spec_list, spe
     if num_species > max_spec_num % We have too many species:
         num_to_kill = num_species - max_spec_num;
         [~ , indices] = sort(spec_radii, 'ascend'); % Higher level species (i.e., LOWER RADIUS) are deleted first
-        for i=1:1:num_to_kill
-            spec_list(:, indices(i)) = [];
-            spec_radii(indices(i)) = [];
-            spec_values(indices(i)) = [];
-        end
+        spec_list(:, indices(1:1:num_to_kill)) = [];
+        spec_radii(indices(1:1:num_to_kil)) = [];
+        spec_values(indices(1:1:num_to_kil)) = [];
     end
 end
 
