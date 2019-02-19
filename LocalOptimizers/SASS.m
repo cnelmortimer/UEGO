@@ -38,6 +38,11 @@ function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, b
         end
         % Generate a multivariate Gaussian vector (perturbation):
         xi = b + normrnd(0, sigma, [dim, 1]);
+        factor = abs(normrnd(0, sigma/(optimizer_config.sig_ub*3))); % 99.7% of a population is within +/- 3 standard deviations
+        if factor > 1.0
+           factor = 1.0;
+        end
+        xi = factor*radius*( xi / norm(xi) ); % Re-scaling
         x_prime = x + xi;
         x_prime(x_prime < bounds(:, 1)) = bounds(x_prime < bounds(:, 1), 1); % If too small: saturate
         x_prime(x_prime > bounds(:, 2)) = bounds(x_prime > bounds(:, 2), 2); % If too big: saturate
@@ -46,7 +51,7 @@ function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, b
             x = x_prime;
             current_value = val_prime;
             b = 0.2*b + 0.4*xi;
-            scnt = scnt+1; 
+            scnt = scnt+1;
             fcnt = 0;
         else
             x_prime = x - xi;
