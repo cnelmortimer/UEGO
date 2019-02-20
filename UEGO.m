@@ -97,14 +97,14 @@ function [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_r
             pool(:, j) = RandomPoint(spec_list(:, i), spec_radii(i), bounds); % New point
             pool_values(j) = func(pool(:, j));
         end
-        inserted = []; % Have any of the new points been already inserted ?
+        inserted = []; % Has any of the new points been already inserted ?
         for j=1:1:num_points % Making pairs
             if pool_values(j) < spec_values(i) % Replace the center of species 'i' (but not the radius)
                 spec_list(:, i) = pool(:, j);
                 spec_values(i) = pool_values(j);
             end
             for k=j+1:1:num_points
-                middle = (pool(:, j) + pool(:, k))/2;
+                middle = (pool(:, j) + pool(:, k))*0.5;
                 middle_val = func(middle);
                 if middle_val < spec_values(i) % Replace the center of species 'i' (but not the radius)
                     spec_list(:, i) = middle;
@@ -130,28 +130,27 @@ function [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_r
 end
 
 function [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, current_rad)
-    num_species = size(spec_list, 2); % The number of columns is equal to the length of the list of species
-    for i=1:1:(num_species - 1)
-       for j=i+1:1:num_species
-           distance = norm(spec_list(:, i) - spec_list(:, j));
-           if distance < current_rad % Fuse both species
-               if spec_values(i) < spec_values(j) % i is better -> new center
-                  kill_focus = j;
-                  keep_focus = i;
-               else % j is better (or equal) -> new center
-                   kill_focus = i;
-                   keep_focus = j;
-               end
-               spec_list(:, kill_focus) = []; % Remove the discarded center
-               spec_values(kill_focus) = []; % Remove the discarded value
-               if(spec_radii(i)>spec_radii(j)) % The radius will be the larger one
-                   spec_radii(keep_focus) = spec_radii(i);
-               else
-                   spec_radii(keep_focus) = spec_radii(j);
-               end
-               spec_radii(kill_focus) = [];
-           end
-       end
+    i = 1;
+    while i <= (size(spec_list, 2) - 1) % The number of columns is equal to the length of the list of species
+        j = i + 1;
+        while j <= size(spec_list, 2)
+            distance = norm(spec_list(:, i) - spec_list(:, j));
+            if distance < current_rad % Fuse both species
+                if spec_values(j) < spec_values(i) % That in j is a better center (there is no need to move otherwise)
+                    spec_list(:, i) = spec_list(:, j);
+                    spec_values(i) = spec_values(j);
+                end
+                if spec_radii(j) > spec_radii(i) % The radius of j is bigger: keep it
+                    spec_radii(i) = spec_radii(j);
+                end
+                spec_list(:, j) = [];
+                spec_values(j) = [];
+                spec_radii(j) = [];
+            else
+               j = j + 1; % If we had removed, we would not need to update the focus because the next one would be "already there" 
+            end
+        end
+        i = i + 1;
     end
 end
 
@@ -161,8 +160,8 @@ function [spec_list, spec_radii, spec_values] = Shorten_Spec_List(spec_list, spe
         num_to_kill = num_species - max_spec_num;
         [~ , indices] = sort(spec_radii, 'ascend'); % Higher level species (i.e., LOWER RADIUS) are deleted first
         spec_list(:, indices(1:1:num_to_kill)) = [];
-        spec_radii(indices(1:1:num_to_kil)) = [];
-        spec_values(indices(1:1:num_to_kil)) = [];
+        spec_radii(indices(1:1:num_to_kill)) = [];
+        spec_values(indices(1:1:num_to_kill)) = [];
     end
 end
 
