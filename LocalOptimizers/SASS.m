@@ -17,7 +17,7 @@ function config = buildConfig()
     config.MaxFcnt = 32; % Maximum number of consecutive fails to stop (included from V. Plaza's TFM)
 end
 
-function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, bounds, func, max_steps, optimizer_config)
+function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, bounds, func, max_evals, optimizer_config)
     x = start_point;
     current_value = initial_val;
     dim = size(bounds, 1); % Number of dimensions
@@ -26,7 +26,7 @@ function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, b
     scnt = 0; % Success counter
     fcnt = 0; % Failure counter
     sigma = optimizer_config.sig_ub;
-    while k<max_steps && fcnt < optimizer_config.MaxFcnt
+    while k<max_evals && fcnt < optimizer_config.MaxFcnt
         if sigma < optimizer_config.sig_lb || sigma > optimizer_config.sig_ub % The sigma > ub is included in Jelasity's...
             sigma = optimizer_config.sig_ub; % scnt = 0;% Jelasity fcnt = 0;% Jelasity b = 0*b;% Jelasity (Restart)
         end
@@ -47,17 +47,19 @@ function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, b
         x_prime(x_prime < bounds(:, 1)) = bounds(x_prime < bounds(:, 1), 1); % If too small: saturate
         x_prime(x_prime > bounds(:, 2)) = bounds(x_prime > bounds(:, 2), 2); % If too big: saturate
         val_prime = func(x_prime);
+        k = k + 1; % Add a new function evaluation 
         if val_prime < current_value % Move:
             x = x_prime;
             current_value = val_prime;
             b = 0.2*b + 0.4*xi;
             scnt = scnt+1;
             fcnt = 0;
-        else
+        elseif k<max_evals % As long as we can call func one more time, continue
             x_prime = x - xi;
             x_prime(x_prime < bounds(:, 1)) = bounds(x_prime < bounds(:, 1), 1); % If too small: saturate
             x_prime(x_prime > bounds(:, 2)) = bounds(x_prime > bounds(:, 2), 2); % If too big: saturate
             val_prime = func(x_prime);
+            k = k + 1; % Add a new function evaluation 
             if val_prime < current_value
                 x = x_prime;
                 current_value = val_prime;
@@ -70,6 +72,5 @@ function [x, current_value] = SASS_optimizer(start_point, radius, initial_val, b
                 scnt = 0;
             end
         end
-        k = k + 1;
     end
 end
