@@ -96,13 +96,13 @@ function [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_r
         for j=1:1:num_points
             pool(:, j) = RandomPoint(spec_list(:, i), spec_radii(i), bounds); % New point
             pool_values(j) = func(pool(:, j));
-        end
-        inserted = []; % Has any of the new points been already inserted ?
-        for j=1:1:num_points % Making pairs
             if pool_values(j) < spec_values(i) % Replace the center of species 'i' (but not the radius)
                 spec_list(:, i) = pool(:, j);
                 spec_values(i) = pool_values(j);
             end
+        end
+        inserted = []; % Has any of the new points been already inserted ?
+        for j=1:1:(num_points-1) % Making pairs
             for k=j+1:1:num_points
                 middle = (pool(:, j) + pool(:, k))*0.5;
                 middle_val = func(middle);
