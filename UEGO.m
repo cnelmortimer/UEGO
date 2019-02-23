@@ -91,18 +91,19 @@ function [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_r
     
     pool = zeros(size(bounds, 1), num_points); % Where to save the new points of each species
     pool_values = zeros(1, num_points);
+    insert_from_pool = zeros(1, num_points);
     
     for i=1:1:num_species % For each species:
         for j=1:1:num_points
             pool(:, j) = RandomPoint(spec_list(:, i), spec_radii(i), bounds); % New point
             pool_values(j) = func(pool(:, j));
+        end
+        insert_from_pool = 0*insert_from_pool; % Reset for this sublist
+        for j=1:1:num_points % Making pairs
             if pool_values(j) < spec_values(i) % Replace the center of species 'i' (but not the radius)
                 spec_list(:, i) = pool(:, j);
                 spec_values(i) = pool_values(j);
             end
-        end
-        inserted = []; % Has any of the new points been already inserted ?
-        for j=1:1:(num_points-1) % Making pairs
             for k=j+1:1:num_points
                 middle = (pool(:, j) + pool(:, k))*0.5;
                 middle_val = func(middle);
@@ -111,21 +112,14 @@ function [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_r
                     spec_values(i) = middle_val;
                 end
                 if middle_val > pool_values(j) && middle_val > pool_values(k) % The middle is worse than the values of the pair
-                    if ~ismember(j, inserted)
-                        spec_list = [spec_list pool(:, j)];
-                        spec_radii = [spec_radii current_rad]; % The radius of the new species is the current one, not the original one
-                        spec_values = [spec_values pool_values(j)];
-                        inserted = [inserted j]; % Do not add duplicates
-                    end
-                    if ~ismember(k, inserted)
-                        spec_list = [spec_list pool(:, k)];
-                        spec_radii = [spec_radii current_rad];
-                        spec_values = [spec_values pool_values(k)];
-                        inserted = [inserted k];
-                    end
+                    insert_from_pool(j) = 1;
+                    insert_from_pool(k) = 1; % Overriding sometimes...
                 end
             end
         end
+        spec_list = [spec_list pool(:, insert_from_pool>0)];
+        spec_values = [spec_values pool_values(insert_from_pool>0)];
+        spec_radii = [spec_radii repmat(current_rad, [1 sum(insert_from_pool)])];
     end
 end
 
