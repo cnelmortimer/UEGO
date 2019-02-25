@@ -40,6 +40,7 @@ end
 function config = ComputeConfig(evals, levels, max_spec_num, min_r, bounds)
     R_1 = norm(bounds(:,1) - bounds(:,2)); % Diameter of the search space
     config.radii = R_1 * ( (min_r / R_1) .^ ((0:1:(levels-1))/(levels-1))); % The radius of each level [1, L]
+    config.radii(1) = R_1; % The radii of the first species is always the diameter
     
     config.new = 3*max_spec_num*ones(1, levels); % Func. evaluations for spec creation
     config.new(1) = 0; % (No new specs at the first level)
