@@ -18,7 +18,7 @@ function [config, spec_list, spec_radii, spec_values] = UEGO(evals, levels, max_
             [spec_list, spec_radii, spec_values] = Create_Species(spec_list, spec_radii, spec_values, bounds, func, config.new(i), config.radii(i));
             [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, config.radii(i));
             [spec_list, spec_radii, spec_values] = Shorten_Spec_List(spec_list, spec_radii, spec_values, max_spec_num);
-            [spec_list, spec_values] = Optimize_Species(spec_list, spec_radii, spec_values, bounds, func, config.n(i)/max_spec_num, local_optimizer, optimizer_config);
+            [spec_list, spec_values] = Optimize_Species(spec_list, spec_radii, spec_values, bounds, func, fix(config.n(i)/max_spec_num), local_optimizer, optimizer_config);
             [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, config.radii(i));
         end
         [spec_values, indices] = sort(spec_values, 'ascend'); % Sort the final list -> Lower is better
