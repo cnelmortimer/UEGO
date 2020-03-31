@@ -9,15 +9,9 @@ end
 function config = buildConfig()
     config.name = 'FMC'; % Default configuration to work with
     config.lazyness = 0.1; % Do not try to restart fmincon if the number of allowed evaluations is <= this
-    config.maxNonImprovingRestarts = 20; % After restarting fmincon 20 times without improving the best known, surrender!
-    config.equalityThr = 1.0000e-05; % When do you think that two real are too similar?
+    config.maxNonImprovingRestarts = 10; % After restarting fmincon 20 times without improving the best known, surrender!
     config.options = optimoptions('fmincon','Algorithm','interior-point');
     config.options.Display = 'off';
-end
-
-function [c,ceq] = MyNonLnrConstr(x, myStartPoint, radius) % See: https://www.mathworks.com/help/optim/ug/nonlinear-constraints.html
-    c = norm(x-myStartPoint) - radius;
-    ceq = [];
 end
 
 function newStart = GetNewStartingPoint(center, radius, bounds)
@@ -34,14 +28,15 @@ function newStart = GetNewStartingPoint(center, radius, bounds)
 end
 
 function [x, current_value] = FMC_optimizer(start_point, radius, initial_val, bounds, func, max_evals, config)
-    current_value = initial_val;
     x = start_point;
+    current_value = initial_val;
+    
     x0 = start_point;
     fails = 0;
     config.options.MaxFunctionEvaluations = max_evals;
     
     while config.options.MaxFunctionEvaluations > (config.lazyness * max_evals) % Do not restart fmincon if allowed evals <= lazyness% of MaxEv.
-        [sol, val, flag, output] = fmincon(func, x0, [], [], [], [], bounds(:,1), bounds(:,2), @(x)MyNonLnrConstr(x, x0, radius), config.options); % Do not go too far for now
+        [sol, val, flag, output] = fmincon(func, x0, [], [], [], [], bounds(:,1), bounds(:,2), [], config.options);
         if val<current_value
             x = sol;
             current_value = val;
@@ -51,21 +46,26 @@ function [x, current_value] = FMC_optimizer(start_point, radius, initial_val, bo
         end
         if fails < config.maxNonImprovingRestarts && flag ~= 0 && config.options.MaxFunctionEvaluations > output.funcCount % As long as I can keep trying
             config.options.MaxFunctionEvaluations = config.options.MaxFunctionEvaluations - output.funcCount; % Updating the counter!
-            if norm(sol-x0)>config.equalityThr && abs(norm(sol - x0) - radius) <= config.equalityThr
-                x0 = sol; % If you moved && you finished at the border of the radius: Restart from the same point (move the window!)
-            else % Otherwise, look for a different start point
-                x0 = GetNewStartingPoint(x, radius, bounds); % The center is the current point whatever it is: the window is moving!
-                if config.options.MaxFunctionEvaluations > 0 % Let us check if we randomly found a better point within the region!
-                    val = func(x0);
-                    if val<current_value
-                        x = x0;
-                        current_value = val; % fails = 0; % FMinCon did not affect here, so do not change the fail count 
-                    end
-                    config.options.MaxFunctionEvaluations = config.options.MaxFunctionEvaluations - 1; % Another evaluation has been done :-/
+            % Now, let's set a different starting point within the region
+            x0 = GetNewStartingPoint(x, radius, bounds); % The center is the current point whatever it is: the window is moving!
+            if config.options.MaxFunctionEvaluations > 0 % Let us check if we randomly found a better point within the region!
+                val = func(x0);
+                if val<current_value
+                    x = x0;
+                    current_value = val; % fails = 0; % FMinCon did not affect here, so do not change the fail count 
                 end
+                config.options.MaxFunctionEvaluations = config.options.MaxFunctionEvaluations - 1; % Another evaluation has been done :-/
             end
         else
             break;
         end
     end
 end
+
+% Warning: This implementation ignores the UEGO's specification regarding not to take any step larger than the species' radius.
+% The previous one tried to manually respect that, but the result was both unstable and inefficient. See: 
+% https://es.mathworks.com/matlabcentral/answers/513188-convergence-problems-of-fmincon-interior-point-with-a-nonlinear-constraint
+% https://stackoverflow.com/questions/60934676/is-it-possible-to-define-a-maximum-step-size-euclidean-distance-for-fmincons
+% Also notice that if UEGO's external logic does not alter this final point, this module will try to restart from the same 
+% point that it found the next time that it is called. However, that might be beneficial:
+% https://es.mathworks.com/help/optim/ug/when-the-solver-might-have-succeeded.html
