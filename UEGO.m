@@ -126,14 +126,16 @@ end
 
 function [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_radii, spec_values, current_rad)
     i = 1;
+    i_restart = false;
     while i <= (size(spec_list, 2) - 1) % The number of columns is equal to the length of the list of species
         j = i + 1;
-        while j <= size(spec_list, 2)
+        while j <= size(spec_list, 2) && ~i_restart
             distance = norm(spec_list(:, i) - spec_list(:, j));
             if distance < current_rad % Fuse both species
                 if spec_values(j) < spec_values(i) % That in j is a better center (there is no need to move otherwise)
                     spec_list(:, i) = spec_list(:, j);
                     spec_values(i) = spec_values(j);
+                    i_restart = true;
                 end
                 if spec_radii(j) > spec_radii(i) % The radius of j is bigger: keep it
                     spec_radii(i) = spec_radii(j);
@@ -145,7 +147,11 @@ function [spec_list, spec_radii, spec_values] = Fuse_Species(spec_list, spec_rad
                j = j + 1; % If we had removed, we would not need to update the focus because the next one would be "already there" 
             end
         end
-        i = i + 1;
+        if i_restart
+            i_restart = false;
+        else
+            i = i + 1;
+        end
     end
 end
 
